@@ -5,15 +5,14 @@ import { getMyAppointments } from "@/lib/mockData";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { IndianRupee, Calendar, User, Wrench } from "lucide-react";
+import { IndianRupee, Calendar, Wrench } from "lucide-react";
 
 export default function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const appointments = useMemo(() => user ? getMyAppointments(user.id) : [], [user]);
 
   if (!user) { navigate("/login"); return null; }
-
-  const appointments = useMemo(() => getMyAppointments(user.id), [user.id]);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -32,24 +31,13 @@ export default function Dashboard() {
               <CardContent className="p-5">
                 <div className="mb-3 flex items-center justify-between">
                   <Badge variant="secondary">{apt.serviceType}</Badge>
-                  <Badge variant={apt.status === "Completed" ? "default" : "outline"}>
-                    {apt.status}
-                  </Badge>
+                  <Badge variant={apt.status === "Completed" ? "default" : "outline"}>{apt.status}</Badge>
                 </div>
                 <h3 className="mb-3 text-lg font-bold text-foreground">{apt.providerName}</h3>
                 <div className="space-y-1.5 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-3.5 w-3.5" />
-                    Service Date: {apt.serviceDate}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <IndianRupee className="h-3.5 w-3.5" />
-                    ₹{apt.priceInRupees}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Wrench className="h-3.5 w-3.5" />
-                    Payment: {apt.paymentMethod}
-                  </div>
+                  <div className="flex items-center gap-2"><Calendar className="h-3.5 w-3.5" />Service Date: {apt.serviceDate}</div>
+                  <div className="flex items-center gap-2"><IndianRupee className="h-3.5 w-3.5" />₹{apt.priceInRupees}</div>
+                  <div className="flex items-center gap-2"><Wrench className="h-3.5 w-3.5" />Payment: {apt.paymentMethod}</div>
                 </div>
               </CardContent>
             </Card>

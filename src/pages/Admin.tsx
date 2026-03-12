@@ -15,20 +15,18 @@ import { IndianRupee, Calendar } from "lucide-react";
 export default function Admin() {
   const { user } = useAuth();
   const navigate = useNavigate();
-
-  if (!user || user.role !== "admin") {
-    navigate("/");
-    return null;
-  }
-
   const [name, setName] = useState("");
   const [serviceType, setServiceType] = useState("");
   const [rating, setRating] = useState("");
   const [price, setPrice] = useState("");
   const [location, setLocation] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
-
   const appointments = useMemo(() => getAllAppointments(), [refreshKey]);
+
+  if (!user || user.role !== "admin") {
+    navigate("/");
+    return null;
+  }
 
   const handleAddProvider = (e: React.FormEvent) => {
     e.preventDefault();
