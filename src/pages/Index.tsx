@@ -25,9 +25,9 @@ const Index = () => {
                 Browse Services <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
-            <Link to="/register">
+            <Link to={user ? "/dashboard" : "/register"}>
               <Button size="lg" variant="outline" className="text-base font-semibold">
-                Get Started
+                {user ? "My Dashboard" : "Get Started"}
               </Button>
             </Link>
           </div>
