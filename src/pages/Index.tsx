@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { serviceCategories } from "@/lib/mockData";
+import { useAuth } from "@/lib/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Star, Shield, Clock } from "lucide-react";
