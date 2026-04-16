@@ -137,6 +137,9 @@ export function addProvider(provider: Omit<Provider, "id" | "createdAt">): Provi
 // Appointment helpers
 export function createAppointment(apt: Omit<Appointment, "id" | "createdAt" | "status" | "paymentMethod">): Appointment {
   const appointments: Appointment[] = JSON.parse(localStorage.getItem("lsc_appointments") || "[]");
+  // Check for double booking
+  const conflict = appointments.find(a => a.providerId === apt.providerId && a.serviceDate === apt.serviceDate && a.timeSlot === apt.timeSlot);
+  if (conflict) throw new Error("This time slot is already booked");
   const newApt: Appointment = { ...apt, id: `a${Date.now()}`, paymentMethod: "Cash on Delivery", status: "Pending", createdAt: new Date().toISOString() };
   appointments.push(newApt);
   localStorage.setItem("lsc_appointments", JSON.stringify(appointments));

@@ -36,6 +36,7 @@ export default function Dashboard() {
                 <h3 className="mb-3 text-lg font-bold text-foreground">{apt.providerName}</h3>
                 <div className="space-y-1.5 text-sm text-muted-foreground">
                   <div className="flex items-center gap-2"><Calendar className="h-3.5 w-3.5" />Service Date: {apt.serviceDate}</div>
+                  {apt.timeSlot && <div className="flex items-center gap-2"><Calendar className="h-3.5 w-3.5" />Time Slot: {apt.timeSlot}</div>}
                   <div className="flex items-center gap-2"><IndianRupee className="h-3.5 w-3.5" />₹{apt.priceInRupees}</div>
                   <div className="flex items-center gap-2"><Wrench className="h-3.5 w-3.5" />Payment: {apt.paymentMethod}</div>
                 </div>
