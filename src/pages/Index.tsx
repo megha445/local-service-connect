@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Star, Shield, Clock } from "lucide-react";
 
 const Index = () => {
+  const { user } = useAuth();
   return (
     <div className="min-h-screen">
       {/* Hero */}
