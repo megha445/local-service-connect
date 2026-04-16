@@ -1,10 +1,12 @@
 import { Link } from "react-router-dom";
 import { serviceCategories } from "@/lib/mockData";
+import { useAuth } from "@/lib/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Star, Shield, Clock } from "lucide-react";
 
 const Index = () => {
+  const { user } = useAuth();
   return (
     <div className="min-h-screen">
       {/* Hero */}
@@ -23,9 +25,9 @@ const Index = () => {
                 Browse Services <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
-            <Link to="/register">
+            <Link to={user ? "/dashboard" : "/register"}>
               <Button size="lg" variant="outline" className="text-base font-semibold">
-                Get Started
+                {user ? "My Dashboard" : "Get Started"}
               </Button>
             </Link>
           </div>
