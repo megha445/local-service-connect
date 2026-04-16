@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
-import { getProviders, createAppointment } from "@/lib/mockData";
+import { getProviders, createAppointment, getBookedSlots, TIME_SLOTS } from "@/lib/mockData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,7 +10,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { CalendarIcon, IndianRupee, CheckCircle2 } from "lucide-react";
+import { CalendarIcon, IndianRupee, CheckCircle2, Clock } from "lucide-react";
 import { toast } from "sonner";
 
 export default function BookAppointment() {
@@ -25,7 +25,13 @@ export default function BookAppointment() {
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [date, setDate] = useState<Date>();
+  const [timeSlot, setTimeSlot] = useState("");
   const [booked, setBooked] = useState(false);
+
+  const bookedSlots = useMemo(() => {
+    if (!date || !provider) return [];
+    return getBookedSlots(provider.id, format(date, "yyyy-MM-dd"));
+  }, [date, provider]);
 
   if (!user) {
     navigate("/login");
@@ -42,17 +48,27 @@ export default function BookAppointment() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!customerName.trim() || !phone.trim() || !address.trim() || !date) {
-      toast.error("Please fill all fields and select a date");
+    if (!customerName.trim() || !phone.trim() || !address.trim() || !date || !timeSlot) {
+      toast.error("Please fill all fields, select a date and time slot");
       return;
     }
     if (phone.trim().length < 10) { toast.error("Enter a valid phone number"); return; }
+
+    // Double-check slot availability at submission time
+    const currentBooked = getBookedSlots(provider.id, format(date, "yyyy-MM-dd"));
+    if (currentBooked.includes(timeSlot)) {
+      toast.error("This time slot was just booked by someone else. Please choose another.");
+      setTimeSlot("");
+      return;
+    }
+
     createAppointment({
       userId: user.id,
       providerId: provider.id,
       providerName: provider.name,
       serviceType: provider.serviceType,
       serviceDate: format(date, "yyyy-MM-dd"),
+      timeSlot,
       customerName: customerName.trim(),
       phone: phone.trim(),
       address: address.trim(),
@@ -68,8 +84,11 @@ export default function BookAppointment() {
           <CardContent className="p-8">
             <CheckCircle2 className="mx-auto mb-4 h-16 w-16 text-success" />
             <h2 className="mb-2 text-2xl font-bold text-foreground">Appointment Booked!</h2>
+            <p className="mb-1 text-muted-foreground">
+              <span className="font-semibold text-foreground">{timeSlot}</span> on <span className="font-semibold text-foreground">{date ? format(date, "dd MMMM yyyy") : ""}</span>
+            </p>
             <p className="mb-4 text-muted-foreground">
-              Appointment booked successfully. Pay <span className="font-semibold text-foreground">₹{provider.priceInRupees}</span> in cash when the service is completed.
+              Pay <span className="font-semibold text-foreground">₹{provider.priceInRupees}</span> in cash when the service is completed.
             </p>
             <div className="flex justify-center gap-3">
               <Button onClick={() => navigate("/dashboard")}>View Dashboard</Button>
@@ -117,21 +136,58 @@ export default function BookAppointment() {
                   <Calendar
                     mode="single"
                     selected={date}
-                    onSelect={setDate}
-                    disabled={(d) => d < new Date()}
+                    onSelect={(d) => { setDate(d); setTimeSlot(""); }}
+                    disabled={(d) => d < new Date(new Date().setHours(0,0,0,0))}
                     initialFocus
                     className="pointer-events-auto p-3"
                   />
                 </PopoverContent>
               </Popover>
             </div>
+
+            {date && (
+              <div>
+                <Label className="mb-2 flex items-center gap-1">
+                  <Clock className="h-4 w-4" /> Select Time Slot
+                </Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {TIME_SLOTS.map(slot => {
+                    const isBooked = bookedSlots.includes(slot);
+                    const isSelected = timeSlot === slot;
+                    return (
+                      <Button
+                        key={slot}
+                        type="button"
+                        variant={isSelected ? "default" : "outline"}
+                        size="sm"
+                        disabled={isBooked}
+                        onClick={() => setTimeSlot(slot)}
+                        className={cn(
+                          "text-xs",
+                          isBooked && "cursor-not-allowed opacity-50 line-through",
+                          isSelected && "ring-2 ring-primary ring-offset-2"
+                        )}
+                      >
+                        {isBooked ? "Unavailable" : slot}
+                      </Button>
+                    );
+                  })}
+                </div>
+                {bookedSlots.length > 0 && (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {bookedSlots.length} slot{bookedSlots.length > 1 ? "s" : ""} already booked for this date
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="rounded-lg bg-accent p-3 text-sm">
               <div className="flex items-center gap-1 font-semibold text-accent-foreground">
                 <IndianRupee className="h-4 w-4" /> Payment: Cash on Delivery
               </div>
               <p className="mt-1 text-muted-foreground">Pay ₹{provider.priceInRupees} in cash when the service is completed.</p>
             </div>
-            <Button type="submit" className="w-full" size="lg">Confirm Booking</Button>
+            <Button type="submit" className="w-full" size="lg" disabled={!timeSlot}>Confirm Booking</Button>
           </form>
         </CardContent>
       </Card>

@@ -23,6 +23,7 @@ export interface Appointment {
   providerName: string;
   serviceType: string;
   serviceDate: string;
+  timeSlot: string;
   customerName: string;
   phone: string;
   address: string;
@@ -30,6 +31,25 @@ export interface Appointment {
   paymentMethod: string;
   status: "Pending" | "Completed";
   createdAt: string;
+}
+
+export const TIME_SLOTS = [
+  "09:00–10:00",
+  "10:00–11:00",
+  "11:00–12:00",
+  "12:00–13:00",
+  "13:00–14:00",
+  "14:00–15:00",
+  "15:00–16:00",
+  "16:00–17:00",
+  "17:00–18:00",
+];
+
+export function getBookedSlots(providerId: string, date: string): string[] {
+  const appointments: Appointment[] = JSON.parse(localStorage.getItem("lsc_appointments") || "[]");
+  return appointments
+    .filter(a => a.providerId === providerId && a.serviceDate === date)
+    .map(a => a.timeSlot);
 }
 
 export const serviceCategories = [
