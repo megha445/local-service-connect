@@ -8,10 +8,14 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { CalendarIcon, IndianRupee, CheckCircle2, Clock } from "lucide-react";
+import { CalendarIcon, IndianRupee, CheckCircle2, Clock, XCircle, Loader2, CreditCard, Banknote } from "lucide-react";
 import { toast } from "sonner";
+
+type PaymentMethod = "Cash on Delivery" | "Online Payment";
+type BookingState = "form" | "processing" | "success" | "failed";
 
 export default function BookAppointment() {
   const [searchParams] = useSearchParams();
@@ -26,17 +30,15 @@ export default function BookAppointment() {
   const [address, setAddress] = useState("");
   const [date, setDate] = useState<Date>();
   const [timeSlot, setTimeSlot] = useState("");
-  const [booked, setBooked] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("Cash on Delivery");
+  const [bookingState, setBookingState] = useState<BookingState>("form");
 
   const bookedSlots = useMemo(() => {
     if (!date || !provider) return [];
     return getBookedSlots(provider.id, format(date, "yyyy-MM-dd"));
   }, [date, provider]);
 
-  if (!user) {
-    navigate("/login");
-    return null;
-  }
+  if (!user) { navigate("/login"); return null; }
 
   if (!provider) {
     return (
@@ -46,7 +48,16 @@ export default function BookAppointment() {
     );
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const simulateOnlinePayment = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        // 85% success rate for demo
+        resolve(Math.random() < 0.85);
+      }, 2000);
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customerName.trim() || !phone.trim() || !address.trim() || !date || !timeSlot) {
       toast.error("Please fill all fields, select a date and time slot");
@@ -54,7 +65,6 @@ export default function BookAppointment() {
     }
     if (phone.trim().length < 10) { toast.error("Enter a valid phone number"); return; }
 
-    // Double-check slot availability at submission time
     const currentBooked = getBookedSlots(provider.id, format(date, "yyyy-MM-dd"));
     if (currentBooked.includes(timeSlot)) {
       toast.error("This time slot was just booked by someone else. Please choose another.");
@@ -62,33 +72,95 @@ export default function BookAppointment() {
       return;
     }
 
-    createAppointment({
-      userId: user.id,
-      providerId: provider.id,
-      providerName: provider.name,
-      serviceType: provider.serviceType,
-      serviceDate: format(date, "yyyy-MM-dd"),
-      timeSlot,
-      customerName: customerName.trim(),
-      phone: phone.trim(),
-      address: address.trim(),
-      priceInRupees: provider.priceInRupees,
-    });
-    setBooked(true);
+    if (paymentMethod === "Online Payment") {
+      setBookingState("processing");
+      const success = await simulateOnlinePayment();
+
+      if (success) {
+        createAppointment({
+          userId: user.id,
+          providerId: provider.id,
+          providerName: provider.name,
+          serviceType: provider.serviceType,
+          serviceDate: format(date, "yyyy-MM-dd"),
+          timeSlot,
+          customerName: customerName.trim(),
+          phone: phone.trim(),
+          address: address.trim(),
+          priceInRupees: provider.priceInRupees,
+          paymentMethod: "Online Payment",
+          paymentStatus: "Paid",
+        });
+        setBookingState("success");
+      } else {
+        setBookingState("failed");
+      }
+    } else {
+      createAppointment({
+        userId: user.id,
+        providerId: provider.id,
+        providerName: provider.name,
+        serviceType: provider.serviceType,
+        serviceDate: format(date, "yyyy-MM-dd"),
+        timeSlot,
+        customerName: customerName.trim(),
+        phone: phone.trim(),
+        address: address.trim(),
+        priceInRupees: provider.priceInRupees,
+        paymentMethod: "Cash on Delivery",
+        paymentStatus: "Pending",
+      });
+      setBookingState("success");
+    }
   };
 
-  if (booked) {
+  if (bookingState === "processing") {
     return (
       <div className="flex min-h-[60vh] items-center justify-center px-4">
         <Card className="w-full max-w-md text-center">
           <CardContent className="p-8">
-            <CheckCircle2 className="mx-auto mb-4 h-16 w-16 text-success" />
+            <Loader2 className="mx-auto mb-4 h-16 w-16 animate-spin text-primary" />
+            <h2 className="mb-2 text-2xl font-bold text-foreground">Processing Payment...</h2>
+            <p className="text-muted-foreground">Please wait while we process your ₹{provider.priceInRupees} payment.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (bookingState === "failed") {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center px-4">
+        <Card className="w-full max-w-md text-center">
+          <CardContent className="p-8">
+            <XCircle className="mx-auto mb-4 h-16 w-16 text-destructive" />
+            <h2 className="mb-2 text-2xl font-bold text-foreground">Payment Failed</h2>
+            <p className="mb-4 text-muted-foreground">Your payment of ₹{provider.priceInRupees} could not be processed. No booking was made.</p>
+            <div className="flex justify-center gap-3">
+              <Button onClick={() => setBookingState("form")}>Try Again</Button>
+              <Button variant="outline" onClick={() => navigate("/providers")}>Browse Providers</Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (bookingState === "success") {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center px-4">
+        <Card className="w-full max-w-md text-center">
+          <CardContent className="p-8">
+            <CheckCircle2 className="mx-auto mb-4 h-16 w-16 text-green-500" />
             <h2 className="mb-2 text-2xl font-bold text-foreground">Appointment Booked!</h2>
             <p className="mb-1 text-muted-foreground">
               <span className="font-semibold text-foreground">{timeSlot}</span> on <span className="font-semibold text-foreground">{date ? format(date, "dd MMMM yyyy") : ""}</span>
             </p>
             <p className="mb-4 text-muted-foreground">
-              Pay <span className="font-semibold text-foreground">₹{provider.priceInRupees}</span> in cash when the service is completed.
+              {paymentMethod === "Online Payment"
+                ? <><span className="font-semibold text-green-600">₹{provider.priceInRupees} Paid</span> via Online Payment</>
+                : <>Pay <span className="font-semibold text-foreground">₹{provider.priceInRupees}</span> in cash when the service is completed.</>
+              }
             </p>
             <div className="flex justify-center gap-3">
               <Button onClick={() => navigate("/dashboard")}>View Dashboard</Button>
@@ -173,19 +245,48 @@ export default function BookAppointment() {
                     );
                   })}
                 </div>
-                {bookedSlots.length > 0 && (
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    {bookedSlots.length} slot{bookedSlots.length > 1 ? "s" : ""} already booked for this date
-                  </p>
-                )}
               </div>
             )}
 
+            {/* Payment Method Selection */}
+            <div>
+              <Label className="mb-2 block">Payment Method</Label>
+              <RadioGroup value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as PaymentMethod)} className="grid grid-cols-2 gap-3">
+                <Label
+                  htmlFor="cod"
+                  className={cn(
+                    "flex cursor-pointer items-center gap-2 rounded-lg border p-3 transition-colors",
+                    paymentMethod === "Cash on Delivery" ? "border-primary bg-primary/5" : "border-border"
+                  )}
+                >
+                  <RadioGroupItem value="Cash on Delivery" id="cod" />
+                  <Banknote className="h-4 w-4" />
+                  <span className="text-sm font-medium">Cash on Delivery</span>
+                </Label>
+                <Label
+                  htmlFor="online"
+                  className={cn(
+                    "flex cursor-pointer items-center gap-2 rounded-lg border p-3 transition-colors",
+                    paymentMethod === "Online Payment" ? "border-primary bg-primary/5" : "border-border"
+                  )}
+                >
+                  <RadioGroupItem value="Online Payment" id="online" />
+                  <CreditCard className="h-4 w-4" />
+                  <span className="text-sm font-medium">Online Payment</span>
+                </Label>
+              </RadioGroup>
+            </div>
+
             <div className="rounded-lg bg-accent p-3 text-sm">
               <div className="flex items-center gap-1 font-semibold text-accent-foreground">
-                <IndianRupee className="h-4 w-4" /> Payment: Cash on Delivery
+                <IndianRupee className="h-4 w-4" /> Payment Summary
               </div>
-              <p className="mt-1 text-muted-foreground">Pay ₹{provider.priceInRupees} in cash when the service is completed.</p>
+              <p className="mt-1 text-muted-foreground">
+                {paymentMethod === "Online Payment"
+                  ? `Pay ₹${provider.priceInRupees} online now (test mode — simulated).`
+                  : `Pay ₹${provider.priceInRupees} in cash when the service is completed.`
+                }
+              </p>
             </div>
             <Button type="submit" className="w-full" size="lg" disabled={!timeSlot}>Confirm Booking</Button>
           </form>

@@ -115,7 +115,8 @@ export default function Admin() {
                     <p className="text-sm text-muted-foreground">Customer: {apt.customerName}</p>
                     <div className="mt-2 space-y-1 text-sm text-muted-foreground">
                       <div className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" /> {apt.serviceDate}</div>
-                      <div className="flex items-center gap-1"><IndianRupee className="h-3.5 w-3.5" /> ₹{apt.priceInRupees} — {apt.paymentMethod}</div>
+                      {apt.timeSlot && <div className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" /> {apt.timeSlot}</div>}
+                      <div className="flex items-center gap-1"><IndianRupee className="h-3.5 w-3.5" /> ₹{apt.priceInRupees} — {apt.paymentMethod} ({apt.paymentStatus})</div>
                     </div>
                   </CardContent>
                 </Card>

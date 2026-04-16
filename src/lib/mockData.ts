@@ -28,8 +28,20 @@ export interface Appointment {
   phone: string;
   address: string;
   priceInRupees: number;
-  paymentMethod: string;
+  paymentMethod: "Cash on Delivery" | "Online Payment";
+  paymentStatus: "Paid" | "Pending" | "Failed";
   status: "Pending" | "Completed";
+  createdAt: string;
+}
+
+export interface Review {
+  id: string;
+  appointmentId: string;
+  userId: string;
+  userName: string;
+  providerId: string;
+  rating: number;
+  reviewText: string;
   createdAt: string;
 }
 
@@ -48,7 +60,7 @@ export const TIME_SLOTS = [
 export function getBookedSlots(providerId: string, date: string): string[] {
   const appointments: Appointment[] = JSON.parse(localStorage.getItem("lsc_appointments") || "[]");
   return appointments
-    .filter(a => a.providerId === providerId && a.serviceDate === date)
+    .filter(a => a.providerId === providerId && a.serviceDate === date && a.paymentStatus !== "Failed")
     .map(a => a.timeSlot);
 }
 
@@ -70,7 +82,6 @@ const defaultProviders: Provider[] = [
   { id: "p8", name: "Ravi Auto Works", serviceType: "Mechanic", rating: 4.3, priceInRupees: 900, location: "Marathahalli, Bangalore", createdAt: new Date().toISOString() },
 ];
 
-// Initialize localStorage with default data
 function initData() {
   if (!localStorage.getItem("lsc_providers")) {
     localStorage.setItem("lsc_providers", JSON.stringify(defaultProviders));
@@ -78,11 +89,12 @@ function initData() {
   if (!localStorage.getItem("lsc_appointments")) {
     localStorage.setItem("lsc_appointments", JSON.stringify([]));
   }
+  if (!localStorage.getItem("lsc_reviews")) {
+    localStorage.setItem("lsc_reviews", JSON.stringify([]));
+  }
   if (!localStorage.getItem("lsc_users")) {
-    // Seed admin user
     const admin: User = { id: "admin1", name: "Admin", email: "admin@localservice.com", role: "admin", createdAt: new Date().toISOString() };
     localStorage.setItem("lsc_users", JSON.stringify([admin]));
-    // Store password separately (demo only)
     localStorage.setItem("lsc_passwords", JSON.stringify({ "admin@localservice.com": "admin123" }));
   }
 }
@@ -135,12 +147,11 @@ export function addProvider(provider: Omit<Provider, "id" | "createdAt">): Provi
 }
 
 // Appointment helpers
-export function createAppointment(apt: Omit<Appointment, "id" | "createdAt" | "status" | "paymentMethod">): Appointment {
+export function createAppointment(apt: Omit<Appointment, "id" | "createdAt" | "status">): Appointment {
   const appointments: Appointment[] = JSON.parse(localStorage.getItem("lsc_appointments") || "[]");
-  // Check for double booking
-  const conflict = appointments.find(a => a.providerId === apt.providerId && a.serviceDate === apt.serviceDate && a.timeSlot === apt.timeSlot);
+  const conflict = appointments.find(a => a.providerId === apt.providerId && a.serviceDate === apt.serviceDate && a.timeSlot === apt.timeSlot && a.paymentStatus !== "Failed");
   if (conflict) throw new Error("This time slot is already booked");
-  const newApt: Appointment = { ...apt, id: `a${Date.now()}`, paymentMethod: "Cash on Delivery", status: "Pending", createdAt: new Date().toISOString() };
+  const newApt: Appointment = { ...apt, id: `a${Date.now()}`, status: "Pending", createdAt: new Date().toISOString() };
   appointments.push(newApt);
   localStorage.setItem("lsc_appointments", JSON.stringify(appointments));
   return newApt;
@@ -153,4 +164,40 @@ export function getMyAppointments(userId: string): Appointment[] {
 
 export function getAllAppointments(): Appointment[] {
   return JSON.parse(localStorage.getItem("lsc_appointments") || "[]");
+}
+
+export function markAppointmentCompleted(appointmentId: string): void {
+  const appointments: Appointment[] = JSON.parse(localStorage.getItem("lsc_appointments") || "[]");
+  const idx = appointments.findIndex(a => a.id === appointmentId);
+  if (idx >= 0) {
+    appointments[idx].status = "Completed";
+    localStorage.setItem("lsc_appointments", JSON.stringify(appointments));
+  }
+}
+
+// Review helpers
+export function addReview(review: Omit<Review, "id" | "createdAt">): Review {
+  const reviews: Review[] = JSON.parse(localStorage.getItem("lsc_reviews") || "[]");
+  const exists = reviews.find(r => r.appointmentId === review.appointmentId);
+  if (exists) throw new Error("You have already reviewed this booking");
+  const newReview: Review = { ...review, id: `r${Date.now()}`, createdAt: new Date().toISOString() };
+  reviews.push(newReview);
+  localStorage.setItem("lsc_reviews", JSON.stringify(reviews));
+  return newReview;
+}
+
+export function getReviewsForProvider(providerId: string): Review[] {
+  const reviews: Review[] = JSON.parse(localStorage.getItem("lsc_reviews") || "[]");
+  return reviews.filter(r => r.providerId === providerId);
+}
+
+export function getAverageRating(providerId: string): number | null {
+  const reviews = getReviewsForProvider(providerId);
+  if (reviews.length === 0) return null;
+  return reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+}
+
+export function hasReviewedAppointment(appointmentId: string): boolean {
+  const reviews: Review[] = JSON.parse(localStorage.getItem("lsc_reviews") || "[]");
+  return reviews.some(r => r.appointmentId === appointmentId);
 }
