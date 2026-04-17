@@ -283,6 +283,10 @@ export default function BookAppointment() {
               </RadioGroup>
             </div>
 
+            {paymentMethod === "Online Payment" && (
+              <PaymentCardForm card={card} onChange={setCard} />
+            )}
+
             <div className="rounded-lg bg-accent p-3 text-sm">
               <div className="flex items-center gap-1 font-semibold text-accent-foreground">
                 <IndianRupee className="h-4 w-4" /> Payment Summary
@@ -294,7 +298,14 @@ export default function BookAppointment() {
                 }
               </p>
             </div>
-            <Button type="submit" className="w-full" size="lg" disabled={!timeSlot}>Confirm Booking</Button>
+            <Button
+              type="submit"
+              className="w-full"
+              size="lg"
+              disabled={!timeSlot || (paymentMethod === "Online Payment" && !isCardValid(card))}
+            >
+              {paymentMethod === "Online Payment" ? `Pay ₹${provider.priceInRupees} Now` : "Confirm Booking"}
+            </Button>
           </form>
         </CardContent>
       </Card>
