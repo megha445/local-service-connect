@@ -75,6 +75,10 @@ export default function BookAppointment() {
     }
 
     if (paymentMethod === "Online Payment") {
+      if (!isCardValid(card)) {
+        toast.error("Please enter valid card details");
+        return;
+      }
       setBookingState("processing");
       const success = await simulateOnlinePayment();
 
