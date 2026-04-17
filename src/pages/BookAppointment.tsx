@@ -33,6 +33,7 @@ export default function BookAppointment() {
   const [timeSlot, setTimeSlot] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("Cash on Delivery");
   const [bookingState, setBookingState] = useState<BookingState>("form");
+  const [card, setCard] = useState<CardDetails>({ cardNumber: "", expiry: "", cvc: "" });
 
   const bookedSlots = useMemo(() => {
     if (!date || !provider) return [];
