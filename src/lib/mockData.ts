@@ -171,6 +171,13 @@ export function markAppointmentCompleted(appointmentId: string): void {
   const idx = appointments.findIndex(a => a.id === appointmentId);
   if (idx >= 0) {
     appointments[idx].status = "Completed";
+    // For Cash on Delivery, mark payment as Paid once the service is completed
+    if (
+      appointments[idx].paymentMethod === "Cash on Delivery" &&
+      appointments[idx].paymentStatus === "Pending"
+    ) {
+      appointments[idx].paymentStatus = "Paid";
+    }
     localStorage.setItem("lsc_appointments", JSON.stringify(appointments));
   }
 }
