@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { CalendarIcon, IndianRupee, CheckCircle2, Clock, XCircle, Loader2, CreditCard, Banknote } from "lucide-react";
 import { toast } from "sonner";
+import PaymentCardForm, { CardDetails, isCardValid } from "@/components/PaymentCardForm";
 
 type PaymentMethod = "Cash on Delivery" | "Online Payment";
 type BookingState = "form" | "processing" | "success" | "failed";
