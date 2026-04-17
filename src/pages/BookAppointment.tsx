@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { CalendarIcon, IndianRupee, CheckCircle2, Clock, XCircle, Loader2, CreditCard, Banknote } from "lucide-react";
 import { toast } from "sonner";
+import PaymentCardForm, { CardDetails, isCardValid } from "@/components/PaymentCardForm";
 
 type PaymentMethod = "Cash on Delivery" | "Online Payment";
 type BookingState = "form" | "processing" | "success" | "failed";
@@ -32,6 +33,7 @@ export default function BookAppointment() {
   const [timeSlot, setTimeSlot] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("Cash on Delivery");
   const [bookingState, setBookingState] = useState<BookingState>("form");
+  const [card, setCard] = useState<CardDetails>({ cardNumber: "", expiry: "", cvc: "" });
 
   const bookedSlots = useMemo(() => {
     if (!date || !provider) return [];
@@ -73,6 +75,10 @@ export default function BookAppointment() {
     }
 
     if (paymentMethod === "Online Payment") {
+      if (!isCardValid(card)) {
+        toast.error("Please enter valid card details");
+        return;
+      }
       setBookingState("processing");
       const success = await simulateOnlinePayment();
 
@@ -277,6 +283,10 @@ export default function BookAppointment() {
               </RadioGroup>
             </div>
 
+            {paymentMethod === "Online Payment" && (
+              <PaymentCardForm card={card} onChange={setCard} />
+            )}
+
             <div className="rounded-lg bg-accent p-3 text-sm">
               <div className="flex items-center gap-1 font-semibold text-accent-foreground">
                 <IndianRupee className="h-4 w-4" /> Payment Summary
@@ -288,7 +298,14 @@ export default function BookAppointment() {
                 }
               </p>
             </div>
-            <Button type="submit" className="w-full" size="lg" disabled={!timeSlot}>Confirm Booking</Button>
+            <Button
+              type="submit"
+              className="w-full"
+              size="lg"
+              disabled={!timeSlot || (paymentMethod === "Online Payment" && !isCardValid(card))}
+            >
+              {paymentMethod === "Online Payment" ? `Pay ₹${provider.priceInRupees} Now` : "Confirm Booking"}
+            </Button>
           </form>
         </CardContent>
       </Card>
